@@ -1,5 +1,25 @@
 from langgraph.graph import StateGraph
 from typing import TypedDict, List
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+llm = ChatOpenAI(
+    model="gpt-5-mini",
+    temperature=0.1,
+    api_key=os.getenv("OPENAI_API_KEY")
+)
+
+prompt_template = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful code analysis assistant. Answer questions based on the provided code context."),
+    ("user", "Query: {query}\n\nCode Context:\n{context}\n\nPlease provide a clear, accurate answer based on the code provided.")
+])
+
+chain = prompt_template | llm | StrOutputParser()
 
 class State(TypedDict):
     query: str
@@ -22,8 +42,21 @@ def explain_node(state: State):
     if not state["contexts"]:
         return {**state, "answer": "Not enough context", "verified": False}
 
-    answer = "Explanation based on files: \n" + "\n".join(c["path"] for c in state["contexts"])
-    return {**state, "answer": answer, "verified": True}
+    context_text = "\n\n".join([
+        f"File: {ctx['path']}\n{ctx['text']}" 
+        for ctx in state["contexts"]
+    ])
+    
+    try:
+        answer = chain.invoke({
+            "query": state["query"],
+            "context": context_text
+        })
+        
+        return {**state, "answer": answer, "verified": True}
+        
+    except Exception as e:
+        return {**state, "answer": f"Error generating explanation: {str(e)}", "verified": False}
 
 def verify_node(state: State):
     if not state["verified"]:

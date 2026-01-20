@@ -77,16 +77,3 @@ async def ask_stream(request: AskRequest):
     )
     
     return StreamingResponse(generator, media_type="application/json")
-
-@router.get("/scan")
-def scan():
-    """Get repository scan results for debugging"""
-    repo_path = Path("../.repos/test-repo").resolve()
-    if not repo_path.exists():
-        return {"error": "Repository not found"}
-    
-    files = scan_repo(repo_path)
-    return {
-        "total_files": len(files),
-        "files": files[:20]
-    }

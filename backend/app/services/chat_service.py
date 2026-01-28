@@ -63,7 +63,7 @@ class ChatServices:
         
         self.add_message_to_session(session_id, "user", user_message)
         
-        context = self.get_repo_context(session["repo_id"])
+        context = self.get_repo_context(session["repo_id"], user_message)
         
         system_message = SystemMessage(
             content=f"""
@@ -99,8 +99,31 @@ class ChatServices:
         except Exception as e:
             yield json.dumps({"error": str(e)})
             
-    def get_repo_context(self, repo_id: str) -> str:
-        return f"Repository context for {repo_id}"
+    def get_repo_context(self, repo_id: str, user_message: str = "") -> str:
+        """Get relevant repository context for the user's query"""
+        if not user_message:
+            return f"You are chatting about the repository: {repo_id}"
+        
+        try:
+            from app.services.vector_store import query
+            
+            results = query(user_message, n_results=5, repo_id=repo_id)
+            
+            if not results["documents"] or not results["documents"][0]:
+                return f"Repository: {repo_id} (No relevant code context found)"
+            
+            context_parts = []
+            for doc, metadata in zip(results["documents"][0], results["metadatas"][0]):
+                file_path = metadata.get("path", "unknown")
+                language = metadata.get("language", "unknown")
+                context_parts.append(f"File: {file_path} ({language})\n{doc}")
+            
+            context = "\n\n---\n\n".join(context_parts)
+            return f"Repository: {repo_id}\n\nRelevant code context:\n\n{context}"
+            
+        except Exception as e:
+            print(f"Error retrieving context: {e}")
+            return f"Repository: {repo_id} (Error retrieving context: {str(e)})"
 
     def get_chat_history(self, session_id: str) -> List[dict]:
         session = self.get_session(session_id)

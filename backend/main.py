@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import repos, ask
+from app.api import repos
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,7 +16,6 @@ app.add_middleware(
 )
 
 app.include_router(repos.router)
-app.include_router(ask.router)
 
 @app.get("/health")
 def health_check():

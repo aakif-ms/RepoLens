@@ -26,13 +26,17 @@ class State(TypedDict):
     contexts: List[dict]
     answer: str
     verified: bool
+    repo_id: str 
 
 def intent_node(state: State):
     return state
 
 def retrieve_node(state: State):
     from app.services.vector_store import query
-    res = query(state["query"], n_results=5)
+    
+    repo_id = state.get("repo_id")
+    res = query(state["query"], n_results=5, repo_id=repo_id)
+    
     ctx = []
     for doc, meta in zip(res["documents"][0], res["metadatas"][0]):
         ctx.append({"text": doc, "path": meta["path"]})

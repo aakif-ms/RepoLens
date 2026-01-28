@@ -20,9 +20,17 @@ def upsert(doc_id: str, text: str, metadata: dict):
     )
     print(f"Upserted documents with id: {doc_id}")
     
-def query(query_text: str, n_results: int = 5):
+def query(query_text: str, n_results: int = 5, repo_id: str = None):
+    where_filter = None
+    if repo_id:
+        where_filter = {"repo_id": {"$eq": repo_id}}
+    
     results = collection.query(
-                query_texts=[query_text],
-                n_results=n_results)
+        query_texts=[query_text],
+        n_results=n_results,
+        where=where_filter
+    )
     print(f"collection count: {collection.count()}")
+    if repo_id:
+        print(f"querying for repo_id: {repo_id}")
     return results
